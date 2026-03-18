@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="LearnFlow">
+<title>LearnFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface2: #eaedf2;
+  --border: #d5dae4;
+  --text: #1a2030;
+  --muted: #8892a4;
+  --accent: #3b6fd4;
+  --accent-lt: #eaf0fc;
+  --danger: #e05a3a;
+  --danger-lt: #fde8e4;
+  --green: #2e9e5b;
+  --green-lt: #e3f7ed;
+  --nav-h: 72px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body { height:100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  max-width: 540px;
+  margin: 0 auto;
+  position: relative;
+  min-height: 100%;
+}
+
+/* ── SCROLLABLE CONTENT ── */
+.page {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 16px calc(var(--nav-h) + var(--safe-bottom) + 20px);
+  min-height: 100vh;
+}
+.page.active { display: flex; }
+
+/* ── TOP BAR ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+}
+
+.topbar-title {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -.5px;
+}
+.topbar-title span { color: var(--accent); }
+
+.topbar-date {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── ACTIVE TIMER BANNER ── */
+#timerBanner {
+  display: none;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 18px;
+  padding: 16px 18px;
+  margin: 12px 16px 0;
+  position: sticky;
+  top: 60px;
+  z-index: 9;
+  box-shadow: 0 4px 20px rgba(59,111,212,.3);
+}
+
+#timerBanner.visible { display: block; }
+
+.tb-row1 { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.tb-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; opacity: .7; }
+.tb-name { font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+.tb-clock {
+  font-family: 'DM Mono', monospace;
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -3px;
+  color: #fff;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.tb-clock.warn { color: #ffd280; animation: blink .9s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.55} }
+
+.tb-bar { height: 3px; background: rgba(255,255,255,.25); border-radius: 2px; margin-bottom: 14px; }
+.tb-bar-fill { height: 100%; border-radius: 2px; background: #fff; transition: width 1s linear; }
+
+.tb-btns { display: flex; gap: 8px; }
+.tbb {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 11px 6px;
+  cursor: pointer;
+  transition: .15s;
+}
+.tbb-pause { background: rgba(255,255,255,.18); color: #fff; }
+.tbb-done { background: #fff; color: var(--accent); }
+.tbb-stop { background: rgba(255,255,255,.1); color: rgba(255,255,255,.75); }
+
+/* ── STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.stat-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  margin-bottom: 2px;
+  color: var(--text);
+}
+
+.stat-lbl {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+
+/* ── PROJECT CARDS ── */
+.proj-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+
+.proj-card.is-running {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59,111,212,.1);
+}
+
+.proj-stripe { height: 4px; }
+
+.proj-body { padding: 16px; }
+
+.proj-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.proj-name { font-weight: 800; font-size: 17px; letter-spacing: -.3px; }
+
+.proj-del {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  transition: .15s;
+}
+.proj-del:active { background: var(--danger-lt); color: var(--danger); }
+
+.proj-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 14px;
+}
+
+.proj-meta .total { color: var(--accent); font-weight: 700; }
+
+/* progress */
+.prog-nums {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.prog-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+.prog-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.prog-pct { font-size: 11px; color: var(--muted); font-weight: 600; text-align: right; margin-bottom: 14px; }
+.prog-pct.complete { color: var(--green); }
+
+/* mini bar chart */
+.mc-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.mc-bars { display: flex; align-items: flex-end; gap: 2px; height: 40px; margin-bottom: 14px; }
+.mc-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 2px; }
+
+/* recent sessions */
+.sess-list { border-top: 1px solid var(--surface2); padding-top: 10px; margin-bottom: 14px; }
+.sess-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.sess-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+.sess-date { font-family: 'DM Mono', monospace; color: var(--muted); }
+.sess-dur { font-family: 'DM Mono', monospace; font-weight: 500; }
+
+/* start button */
+.btn-start {
+  width: 100%;
+  background: var(--accent-lt);
+  border: 1.5px solid var(--accent);
+  border-radius: 12px;
+  color: var(--accent);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 13px;
+  cursor: pointer;
+  transition: .15s;
+}
+.btn-start:active { background: var(--accent); color: #fff; }
+.btn-start.is-on { background: var(--accent); color: #fff; cursor: default; }
+
+/* empty state */
+.empty { text-align: center; padding: 48px 20px; color: var(--muted); font-size: 14px; font-weight: 500; }
+
+/* ── ADD PAGE ── */
+.add-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.add-card-title { font-weight: 700; font-size: 15px; margin-bottom: 16px; }
+
+.fld { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.fld label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.fld input {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 13px 14px;
+  outline: none;
+  transition: border-color .2s;
+  width: 100%;
+  -webkit-appearance: none;
+}
+.fld input:focus { border-color: var(--accent); }
+.fld input::placeholder { color: var(--border); }
+
+.fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.color-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.csw {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: transform .15s, border-color .15s;
+}
+.csw.sel { border-color: var(--text); transform: scale(1.15); }
+
+.btn-add-proj {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 15px;
+  cursor: pointer;
+  transition: .15s;
+}
+.btn-add-proj:active { filter: brightness(.9); }
+
+/* ── STATS PAGE ── */
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.chart-card-title { font-weight: 700; font-size: 15px; margin-bottom: 14px; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 540px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: var(--safe-bottom);
+  z-index: 100;
+}
+
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s;
+  font-family: 'Cabinet Grotesk', sans-serif;
+}
+
+.nav-btn.active { color: var(--accent); }
+.nav-btn svg { width: 22px; height: 22px; }
+.nav-btn span { font-size: 10px; font-weight: 700; letter-spacing: .3px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(26,32,48,.4);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px calc(24px + var(--safe-bottom));
+  width: 100%;
+  max-width: 540px;
+  animation: slideUp .25s cubic-bezier(.34,1.4,.64,1);
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+.modal-title { font-weight: 800; font-size: 19px; letter-spacing: -.3px; margin-bottom: 4px; }
+.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+.presets { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; margin-bottom: 20px; }
+.preset {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 12px 4px;
+  cursor: pointer;
+  color: var(--text);
+  transition: .15s;
+}
+.preset:active, .preset.active-preset { background: var(--accent-lt); border-color: var(--accent); color: var(--accent); }
+
+.modal-custom-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.modal-custom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+
+.modal-btns { display: flex; gap: 10px; }
+.modal-cancel {
+  flex: 1;
+  background: var(--surface2);
+  border: none;
+  border-radius: 14px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 14px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.modal-start {
+  flex: 2;
+  background: var(--accent);
+  border: none;
+  border-radius: 14px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 14px;
+  cursor: pointer;
+  color: #fff;
+}
+.modal-start:active { filter: brightness(.9); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 13px;
+  opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  z-index: 300;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* desktop fallback */
+@media(min-width:541px) {
+  .modal { border-radius: 20px; margin-bottom: 40px; }
+  .modal-overlay { align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-title">Learn<span>Flow</span></div>
+  <div class="topbar-date" id="topDate"></div>
+</div>
+
+<!-- ACTIVE TIMER BANNER -->
+<div id="timerBanner">
+  <div class="tb-label">Активна сесія</div>
+  <div class="tb-name" id="tbName"></div>
+  <div class="tb-clock" id="tbClock">00:00</div>
+  <div class="tb-bar"><div class="tb-bar-fill" id="tbFill"></div></div>
+  <div class="tb-btns">
+    <button class="tbb tbb-pause" id="tbPauseBtn" onclick="pauseResume()">⏸ Пауза</button>
+    <button class="tbb tbb-done" onclick="doneSession()">✓ Готово</button>
+    <button class="tbb tbb-stop" onclick="stopTimer()">✕</button>
+  </div>
+</div>
+
+<!-- ── PAGE: PROJECTS ── -->
+<div class="page active" id="pageProjects">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="stToday">0хв</div><div class="stat-lbl">Сьогодні</div></div>
+    <div class="stat-card"><div class="stat-val" id="stWeek">0г</div><div class="stat-lbl">Тиждень</div></div>
+    <div class="stat-card"><div class="stat-val" id="stAll">0г</div><div class="stat-lbl">Всього</div></div>
+  </div>
+  <div id="projList"></div>
+</div>
+
+<!-- ── PAGE: ADD ── -->
+<div class="page" id="pageAdd">
+  <div class="add-card">
+    <div class="add-card-title">Новий проект</div>
+    <div class="fld">
+      <label>Назва проекту</label>
+      <input id="iName" placeholder="Python, Англійська, Дизайн…" maxlength="40">
+    </div>
+    <div class="fld-row">
+      <div class="fld">
+        <label>Ціль год / тиж</label>
+        <input id="iHours" type="number" min="0" max="99" value="5" inputmode="numeric">
+      </div>
+      <div class="fld">
+        <label>Ціль хвил / тиж</label>
+        <input id="iMins" type="number" min="0" max="59" value="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="fld"><label>Колір</label></div>
+    <div class="color-row" id="colorRow"></div>
+    <button class="btn-add-proj" onclick="addProject()">+ Додати проект</button>
+  </div>
+</div>
+
+<!-- ── PAGE: STATS ── -->
+<div class="page" id="pageStats">
+  <div class="chart-card">
+    <div class="chart-card-title">Активність — 28 днів</div>
+    <canvas id="chart"></canvas>
+  </div>
+  <div id="statsList"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav0" onclick="goPage(0)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+    <span>Проекти</span>
+  </button>
+  <button class="nav-btn" id="nav1" onclick="goPage(1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/>
+    </svg>
+    <span>Додати</span>
+  </button>
+  <button class="nav-btn" id="nav2" onclick="goPage(2)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+    </svg>
+    <span>Статистика</span>
+  </button>
+</nav>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Тривалість сесії</div>
+    <div class="modal-sub" id="modalSub"></div>
+    <div class="presets">
+      <button class="preset" onclick="setPreset(15,this)">15хв</button>
+      <button class="preset" onclick="setPreset(25,this)">25хв</button>
+      <button class="preset" onclick="setPreset(45,this)">45хв</button>
+      <button class="preset" onclick="setPreset(60,this)">1год</button>
+      <button class="preset" onclick="setPreset(90,this)">1.5г</button>
+    </div>
+    <div class="modal-custom-label">Або свій час</div>
+    <div class="modal-custom-row">
+      <div class="fld"><label>Години</label><input id="mH" type="number" min="0" max="23" value="0" inputmode="numeric"></div>
+      <div class="fld"><label>Хвилини</label><input id="mM" type="number" min="0" max="59" value="25" inputmode="numeric"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Скасувати</button>
+      <button class="modal-start" onclick="confirmStart()">▶ Почати</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const COLORS=['#3b6fd4','#e05a3a','#2e9e5b','#9b59b6','#e6a817','#1a9090','#c0392b','#2980b9','#7d6608','#1e8449'];
+let D=JSON.parse(localStorage.getItem('lf3')||'null')||{subjects:[],sessions:[],color:COLORS[0]};
+let activeId=null,timerIv=null,remaining=0,totalSecs=0,isPaused=false,sessionStart=null,pendingId=null;
+
+const save=()=>localStorage.setItem('lf3',JSON.stringify(D));
+const pad=n=>String(n).padStart(2,'0');
+const fmtSecs=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;return h>0?`${pad(h)}:${pad(m)}:${pad(sc)}`:`${pad(m)}:${pad(sc)}`;};
+const fmtHM=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);if(h&&m)return`${h}г ${m}хв`;if(h)return`${h}г`;if(m)return`${m}хв`;return'0хв';};
+const dayKey=(d=new Date())=>d.toISOString().slice(0,10);
+const weekKey=(d=new Date())=>{const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay()+1);return x.toISOString().slice(0,10);};
+const subjSess=id=>D.sessions.filter(s=>s.sid===id);
+const totalSpent=id=>subjSess(id).reduce((a,s)=>a+s.dur,0);
+const weekSpent=(id,wk=weekKey())=>D.sessions.filter(s=>s.sid===id&&s.wk===wk).reduce((a,s)=>a+s.dur,0);
+const daySpent=(id,dk=dayKey())=>D.sessions.filter(s=>s.sid===id&&s.day===dk).reduce((a,s)=>a+s.dur,0);
+const allDaySpent=(dk=dayKey())=>D.sessions.filter(s=>s.day===dk).reduce((a,s)=>a+s.dur,0);
+const lastDays=n=>Array.from({length:n},(_,i)=>{const d=new Date();d.setDate(d.getDate()-n+1+i);return dayKey(d);});
+
+// ── NAV ──
+let curPage=0;
+function goPage(i){
+  curPage=i;
+  document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.nav-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  if(i===2) setTimeout(renderChart,50);
+}
+
+// ── COLORS ──
+function renderColors(){
+  document.getElementById('colorRow').innerHTML=COLORS.map(c=>
+    `<div class="csw${D.color===c?' sel':''}" style="background:${c}" onclick="pickColor('${c}')"></div>`
+  ).join('');
+}
+function pickColor(c){D.color=c;renderColors();}
+
+// ── ADD PROJECT ──
+function addProject(){
+  const name=document.getElementById('iName').value.trim();
+  const h=parseInt(document.getElementById('iHours').value)||0;
+  const m=parseInt(document.getElementById('iMins').value)||0;
+  const goal=h*3600+m*60;
+  if(!name){toast('Введи назву');return;}
+  if(!goal){toast('Вкажи ціль');return;}
+  D.subjects.push({id:Date.now(),name,goal,color:D.color});
+  document.getElementById('iName').value='';
+  save();renderAll();toast(`«${name}» додано!`);
+  goPage(0);
+}
+
+// ── MODAL ──
+function openModal(id){
+  if(activeId===id)return;
+  pendingId=id;
+  const s=D.subjects.find(x=>x.id===id);
+  document.getElementById('modalSub').textContent=s.name;
+  document.getElementById('mH').value=0;
+  document.getElementById('mM').value=25;
+  document.querySelectorAll('.preset').forEach((b,i)=>b.classList.toggle('active-preset',i===1));
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');pendingId=null;}
+function setPreset(mins,el){
+  document.getElementById('mH').value=Math.floor(mins/60);
+  document.getElementById('mM').value=mins%60;
+  document.querySelectorAll('.preset').forEach(b=>b.classList.remove('active-preset'));
+  el.classList.add('active-preset');
+}
+function confirmStart(){
+  const h=parseInt(document.getElementById('mH').value)||0;
+  const m=parseInt(document.getElementById('mM').value)||0;
+  const secs=h*3600+m*60;
+  if(secs<60){toast('Мінімум 1 хвилина');return;}
+  const id=pendingId;
+  closeModal();
+  startTimer(id,secs);
+}
+
+// ── TIMER ──
+function startTimer(id,secs){
+  stopTimer(false);
+  activeId=id;isPaused=false;sessionStart=Date.now();
+  remaining=secs;totalSecs=secs;
+  timerIv=setInterval(tick,1000);
+  renderAll();
+}
+function tick(){
+  if(isPaused)return;
+  remaining--;
+  if(remaining<=0){finishTimer();playBeep();toast('⏰ Сесія завершена!');return;}
+  updateBanner();
+}
+function updateBanner(){
+  const warn=remaining<120;
+  document.getElementById('tbClock').textContent=fmtSecs(remaining);
+  document.getElementById('tbClock').className='tb-clock'+(warn?' warn':'');
+  document.getElementById('tbFill').style.width=Math.max(0,(remaining/totalSecs)*100)+'%';
+  document.getElementById('tbPauseBtn').textContent=isPaused?'▶ Далі':'⏸ Пауза';
+}
+function pauseResume(){isPaused=!isPaused;updateBanner();}
+function stopTimer(doSave=true){
+  if(!activeId)return;
+  clearInterval(timerIv);timerIv=null;
+  if(doSave&&sessionStart)saveSession();
+  activeId=null;isPaused=false;sessionStart=null;
+  renderAll();
+}
+function finishTimer(){
+  clearInterval(timerIv);timerIv=null;
+  if(sessionStart)saveSession();
+  activeId=null;sessionStart=null;renderAll();
+}
+function doneSession(){
+  clearInterval(timerIv);timerIv=null;
+  if(sessionStart)saveSession();
+  toast('✓ Сесію збережено!');
+  activeId=null;sessionStart=null;renderAll();
+}
+function saveSession(){
+  const dur=Math.round((Date.now()-sessionStart)/1000);
+  if(dur<5)return;
+  D.sessions.push({sid:activeId,day:dayKey(),wk:weekKey(),dur});
+  save();
+}
+function playBeep(){
+  try{const ctx=new(window.AudioContext||window.webkitAudioContext)();[0,.35,.7].forEach(d=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=660;g.gain.setValueAtTime(.3,ctx.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+d+.5);o.start(ctx.currentTime+d);o.stop(ctx.currentTime+d+.5);});}catch(e){}
+}
+
+// ── DELETE ──
+function deleteProject(id){
+  if(!confirm('Видалити проект?'))return;
+  if(activeId===id)stopTimer(false);
+  D.subjects=D.subjects.filter(s=>s.id!==id);
+  D.sessions=D.sessions.filter(s=>s.sid!==id);
+  save();renderAll();toast('Видалено');
+}
+
+// ── TOAST ──
+let toastT;
+function toast(msg){
+  clearTimeout(toastT);
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  toastT=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ── RENDER ──
+function renderAll(){renderColors();renderTopDate();renderBanner();renderStats();renderProjects();renderStatsList();}
+
+function renderTopDate(){
+  const d=new Date();
+  document.getElementById('topDate').textContent=d.toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'short'});
+}
+
+function renderBanner(){
+  const banner=document.getElementById('timerBanner');
+  if(!activeId||!D.subjects.find(s=>s.id===activeId)){banner.classList.remove('visible');return;}
+  const s=D.subjects.find(x=>x.id===activeId);
+  document.getElementById('tbName').textContent=s.name;
+  document.getElementById('tbClock').textContent=fmtSecs(remaining);
+  document.getElementById('tbFill').style.width=Math.max(0,(remaining/totalSecs)*100)+'%';
+  document.getElementById('tbPauseBtn').textContent=isPaused?'▶ Далі':'⏸ Пауза';
+  banner.classList.add('visible');
+}
+
+function renderStats(){
+  const wk=weekKey(),dk=dayKey();
+  const tw=D.sessions.filter(s=>s.wk===wk).reduce((a,s)=>a+s.dur,0);
+  const all=D.sessions.reduce((a,s)=>a+s.dur,0);
+  document.getElementById('stToday').textContent=fmtHM(allDaySpent(dk));
+  document.getElementById('stWeek').textContent=fmtHM(tw);
+  document.getElementById('stAll').textContent=fmtHM(all);
+}
+
+function renderProjects(){
+  const el=document.getElementById('projList');
+  if(!D.subjects.length){el.innerHTML='<div class="empty">Додай перший проект →</div>';return;}
+  const days14=lastDays(14),todayK=dayKey();
+  el.innerHTML=D.subjects.map(s=>{
+    const tot=totalSpent(s.id),wk=weekSpent(s.id);
+    const pct=Math.min(100,Math.round(wk/s.goal*100));
+    const da=days14.map(d=>daySpent(s.id,d));
+    const mx=Math.max(1,...da);
+    const bars=days14.map((d,i)=>`<div class="mc-bar" style="height:${Math.max(da[i]/mx*100,da[i]>0?10:2)}%;background:${s.color};opacity:${d===todayK?1:.4}"></div>`).join('');
+    const recent=[...subjSess(s.id)].reverse().slice(0,3);
+    const sessRows=recent.map(x=>`<div class="sess-row"><span class="sess-date">${x.day.slice(5)}</span><span class="sess-dur">${fmtHM(x.dur)}</span></div>`).join('');
+    const isRunning=activeId===s.id;
+    return `<div class="proj-card${isRunning?' is-running':''}">
+      <div class="proj-stripe" style="background:${s.color}"></div>
+      <div class="proj-body">
+        <div class="proj-header">
+          <div class="proj-name">${s.name}</div>
+          <button class="proj-del" onclick="deleteProject(${s.id})">✕</button>
+        </div>
+        <div class="proj-meta">
+          <span>Ціль: ${fmtHM(s.goal)}/тиж</span>
+          <span class="total">Всього: ${fmtHM(tot)}</span>
+        </div>
+        <div class="prog-nums"><span>${fmtHM(wk)} цього тижня</span><span style="color:var(--muted)">${fmtHM(s.goal)}</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${s.color}"></div></div>
+        <div class="prog-pct${pct>=100?' complete':''}">${pct}%${pct>=100?' ✓':''}</div>
+        <div class="mc-label">Активність (14 днів)</div>
+        <div class="mc-bars">${bars}</div>
+        ${recent.length?`<div class="sess-list"><div class="sess-label">Останні сесії</div>${sessRows}</div>`:''}
+        <button class="btn-start${isRunning?' is-on':''}" onclick="${isRunning?'':'openModal('+s.id+')'}">
+          ${isRunning?'▶ Активна сесія…':'▶ Почати сесію'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStatsList(){
+  const el=document.getElementById('statsList');
+  if(!D.subjects.length){el.innerHTML='';return;}
+  el.innerHTML=D.subjects.map(s=>{
+    const tot=totalSpent(s.id),wk=weekSpent(s.id);
+    const pct=Math.min(100,Math.round(wk/s.goal*100));
+    return `<div class="proj-card">
+      <div class="proj-stripe" style="background:${s.color}"></div>
+      <div class="proj-body">
+        <div class="proj-header"><div class="proj-name">${s.name}</div></div>
+        <div class="proj-meta"><span>Ціль: ${fmtHM(s.goal)}/тиж</span><span class="total">Всього: ${fmtHM(tot)}</span></div>
+        <div class="prog-nums"><span>${fmtHM(wk)} цього тижня</span><span style="color:var(--muted)">${fmtHM(s.goal)}</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${s.color}"></div></div>
+        <div class="prog-pct${pct>=100?' complete':''}">${pct}%${pct>=100?' ✓':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderChart(){
+  const canvas=document.getElementById('chart');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.parentElement.clientWidth-36;
+  const h=180;
+  canvas.width=w*dpr;canvas.height=h*dpr;
+  canvas.style.width=w+'px';canvas.style.height=h+'px';
+  ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);
+  const days=lastDays(28),todayK=dayKey();
+  const padL=40,padB=22,padT=20,padR=8;
+  const cw=w-padL-padR,ch=h-padB-padT;
+  const tots=days.map(d=>D.sessions.filter(s=>s.day===d).reduce((a,s)=>a+s.dur,0));
+  const mx=Math.max(3600,...tots);
+  ctx.strokeStyle='#d5dae4';ctx.lineWidth=1;
+  [.5,1].forEach(f=>{
+    const y=padT+ch-ch*f;
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(padL+cw,y);ctx.stroke();
+    ctx.fillStyle='#8892a4';ctx.font='10px DM Mono,monospace';ctx.textAlign='right';
+    ctx.fillText(fmtHM(mx*f),padL-4,y+4);
+  });
+  const bw=cw/days.length-1.5;
+  days.forEach((dk,i)=>{
+    const x=padL+i*(cw/days.length);
+    let yOff=0;
+    D.subjects.forEach(s=>{
+      const dur=daySpent(s.id,dk);if(!dur)return;
+      const bh=(dur/mx)*ch;const y=padT+ch-yOff-bh;
+      ctx.fillStyle=s.color+(dk===todayK?'ff':'bb');
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(x+.5,y,bw,bh,[2,2,0,0]);else ctx.rect(x+.5,y,bw,bh);
+      ctx.fill();yOff+=bh;
+    });
+    if(i===0||i%7===0||dk===todayK){
+      ctx.fillStyle=dk===todayK?'#3b6fd4':'#8892a4';
+      ctx.font=dk===todayK?'bold 9px Cabinet Grotesk,sans-serif':'9px Cabinet Grotesk,sans-serif';
+      ctx.textAlign='center';ctx.fillText(dk.slice(5),x+bw/2,h-6);
+    }
+  });
+  if(D.subjects.length){
+    let lx=padL;const ly=10;
+    D.subjects.forEach(s=>{
+      if(lx>w-60)return;
+      ctx.fillStyle=s.color;ctx.fillRect(lx,ly-8,8,8);
+      ctx.fillStyle='#8892a4';ctx.font='10px Cabinet Grotesk,sans-serif';ctx.textAlign='left';
+      ctx.fillText(s.name,lx+11,ly);
+      lx+=ctx.measureText(s.name).width+22;
+    });
+  }
+}
+
+document.getElementById('iName').addEventListener('keydown',e=>{if(e.key==='Enter')addProject();});
+window.addEventListener('resize',()=>{if(curPage===2)renderChart();});
+renderAll();
+</script>
+</body>
+</html>
